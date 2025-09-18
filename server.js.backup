@@ -1,0 +1,133 @@
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const app = express();
+const PORT = 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Health check endpoint
+app.get('/api/status', (req, res) => {
+    res.json({ 
+        status: 'SCORPION NAVY Backend Online', 
+        port: PORT,
+        timestamp: new Date().toISOString(),
+        version: 'v1.5.0'
+    });
+});
+
+// Get all scan data
+app.get('/api/scans', (req, res) => {
+    try {
+        const data = fs.readFileSync('../database/scanDB007.csv', 'utf8');
+        const lines = data.trim().split('\n');
+        const results = [];
+        
+        // Skip header line
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            if (values.length >= 7) {
+                results.push({
+                    ScanID: values[0],
+                    Timestamp: values[1],
+                    ScannedCode: values[2],
+                    CodeType: values[3],
+                    Validated: values[4],
+                    ClientCode: values[5],
+                    FeatureUsed: values[6]
+                });
+            }
+        }
+        res.json(results);
+    } catch (error) {
+        res.json({ error: 'Could not read scan data', details: error.message });
+    }
+});
+
+// Get discount data
+app.get('/api/discounts', (req, res) => {
+    try {
+        const data = fs.readFileSync('../database/diDB001.csv', 'utf8');
+        const lines = data.trim().split('\n');
+        const results = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            if (values.length >= 6) {
+                results.push({
+                    DiscountID: values[0],
+                    BottleCode: values[1],
+                    DiscountPercent: values[2],
+                    VolumeML: values[3],
+                    Timestamp: values[4],
+                    ClientCode: values[5]
+                });
+            }
+        }
+        res.json(results);
+    } catch (error) {
+        res.json({ error: 'Could not read discount data', details: error.message });
+    }
+});
+
+// Get inventory data
+app.get('/api/inventory', (req, res) => {
+    try {
+        const data = fs.readFileSync('../database/invDB002.csv', 'utf8');
+        const lines = data.trim().split('\n');
+        const results = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            if (values.length >= 6) {
+                results.push({
+                    InventoryID: values[0],
+                    BottleCode: values[1],
+                    ClientCode: values[2],
+                    Status: values[3],
+                    Location: values[4],
+                    LastScan: values[5]
+                });
+            }
+        }
+        res.json(results);
+    } catch (error) {
+        res.json({ error: 'Could not read inventory data', details: error.message });
+    }
+});
+
+// Add a new scan
+app.post('/api/scan', (req, res) => {
+    try {
+        const { code, codeType, clientCode } = req.body;
+        const timestamp = new Date().toISOString();
+        const scanData = {
+            ScanID: `SCAN-${Date.now()}`,
+            Timestamp: timestamp,
+            ScannedCode: code,
+            CodeType: codeType || 'MANUAL_ENTRY',
+            Validated: 'true',
+            ClientCode: clientCode || 'LCC7708',
+            FeatureUsed: 'API'
+        };
+
+        // Append to CSV
+        const csvLine = `\n${Object.values(scanData).join(',')}`;
+        fs.appendFileSync('../database/scanDB007.csv', csvLine);
+        
+        res.json({ success: true, scan: scanData });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`🔄 SCORPION Backend Server running on http://localhost:${PORT}`);
+    console.log(`📊 Health: http://localhost:${PORT}/api/status`);
+    console.log(`📈 Scans: http://localhost:${PORT}/api/scans`);
+    console.log(`🎯 Discounts: http://localhost:${PORT}/api/discounts`);
+});

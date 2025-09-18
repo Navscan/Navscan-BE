@@ -1,0 +1,5 @@
+nohup: ignoring input
+🔄 SCORPION Backend Server running on http://localhost:3000
+📊 Health: http://localhost:3000/api/status
+📈 Scans: http://localhost:3000/api/scans
+🎯 Discounts: http://localhost:3000/api/discounts
